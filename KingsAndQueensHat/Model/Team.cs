@@ -165,6 +165,11 @@ namespace KingsAndQueensHat.Model
             get { return Players.Count(p => p.Gender == Gender.Female); }
         }
 
+        public int OfGender(Gender gender)
+        {
+            return Players.Count(p => p.Gender == gender);
+        }
+
         /// <summary>
         /// The full set of pairings between all players
         /// </summary>

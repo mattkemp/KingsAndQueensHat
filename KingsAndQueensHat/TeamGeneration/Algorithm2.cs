@@ -64,8 +64,10 @@ namespace KingsAndQueensHat.TeamGeneration
                 // based on win percent factor adjust the score up or down
                 // score moves by factor times number of games played
 
+                var experienceFactor = player.SkillLevel.Value / 100M;
+                if (player.GamesPlayed == 0) experienceFactor += experienceFactor; // double the effect if they haven't played any games yet
                 var winPercentFactor = (player.WinPercent - 50M) / 100; //  this a negative factor for win % < 50, positive for > 50
-                var adjustedScore = averageScore + winPercentFactor * player.GamesPlayed;
+                var adjustedScore = averageScore + experienceFactor + winPercentFactor * player.GamesPlayed; // if they haven't played any games - makes no difference
                 player.AdjustedScore = Math.Max(player.GameScore, adjustedScore);
             }
 
@@ -134,28 +136,76 @@ namespace KingsAndQueensHat.TeamGeneration
 
         private void AssignTeam(List<Player> players, bool isTopWomen, bool topFirst) // no defaults on these params to make it more obvious
         {
-            for (var i = 0; i < _teams.Count; i++)
-            { // do once for each team
+            if (!players.Any()) return;
+            var gender = players.First().Gender;
+            var aboutToRunOutOfPlayers = players.Count <= _teams.Count;
+
+            for (var i = 0; i < _teams.Count; i++) { // if we have four teams, run through four times - it *should* be even teams after a round of this, but sometimes isn't (which is ok)
                 if (!players.Any()) return;
                 var thisPlayer = players.First();
-                GetNextTeam(isTopWomen, topFirst).AddPlayer(thisPlayer);
+                GetNextTeam(topFirst, gender, aboutToRunOutOfPlayers).AddPlayer(thisPlayer);
                 players.Remove(thisPlayer); // remove from the temp list we are working with now
                 _presentPlayers.Remove(thisPlayer); // remove from the master player list
             }
         }
 
-        private Team GetNextTeam(bool isTopWomen, bool topFirst = true)
+        private Team GetNextTeam(bool topFirst, Gender gender, bool aboutToRunOutOfPlayers)
         {
             // the main idea is to get top ranked players always facing off against each other
-            // TODO: put more players in first teams so that people can fill in if no-shows for later games
+
+
+            // if teams.Count isn't even we might need to do a couple of things:
+            //  - skip the last team when re-ordering. We need the two top women on opposite teams
+            //  - even gender split section might need some re-work?
 
             // make a copy of teams and whittle down to best suited team
-            var whittledTeams = _teams.ToList();
-            if (isTopWomen)
+            var orderedTeams = _teams.ToList();
+            if (topFirst && gender == Gender.Female)
             {
                 // TODO: if teams.Count isn't even skip the last team? Need the two top women on even teams
-                whittledTeams.Reverse(); // flip the sort order - so top women aren't on same team as top men
+                orderedTeams.Reverse(); // flip the sort order - so top women aren't on same team as top men
             }
+            var whittledTeams = orderedTeams.ToList();
+
+            // Even gender split is most important factor
+            if (aboutToRunOutOfPlayers) {
+                
+                var maxGenderOnATeam = orderedTeams.Max(x => x.OfGender(gender));
+                var allTeamsHaveTheSameNumberOfGender = orderedTeams.All(x => x.OfGender(gender) == maxGenderOnATeam);
+                if (!allTeamsHaveTheSameNumberOfGender) {
+                    // teams are in pairs 1&2, 3&4 etc
+
+                    // look ahead for uneven pairs first - main priority
+                    var thereAreUnevenPairings = false;
+                    for (int i = 0; i + 1 < orderedTeams.Count; i = i + 2)
+                    {
+                        var thisTeam = orderedTeams[i];
+                        var nextTeam = orderedTeams[i + 1];
+
+                        thereAreUnevenPairings = thisTeam.OfGender(gender) != nextTeam.OfGender(gender);
+                        if (thereAreUnevenPairings) break; // stop looking
+                    }
+
+                    // knock out teams we don't want to put even more players on
+                    for (int i = 0; i + 1 < orderedTeams.Count; i = i + 2) {
+                        var thisTeam = orderedTeams[i];
+                        var nextTeam = orderedTeams[i + 1];
+
+                        // which teams to whittle down?
+                        if (thisTeam.OfGender(gender) == nextTeam.OfGender(gender)) {
+                            if (thereAreUnevenPairings || thisTeam.OfGender(gender) == maxGenderOnATeam) { // both
+                                whittledTeams.Remove(thisTeam);
+                                whittledTeams.Remove(nextTeam);
+                            }
+                        }
+                        if (thisTeam.OfGender(gender) > nextTeam.OfGender(gender)) whittledTeams.Remove(thisTeam); // thisTeam
+                        if (thisTeam.OfGender(gender) < nextTeam.OfGender(gender)) whittledTeams.Remove(nextTeam); // nextTeam
+                    }
+                }
+            }
+
+            // TODO: put more players in first teams so that people can fill in if no-shows for later games
+
 
             // get team with lowest number of players, lowest points totals, (first round this is teams 1->X), then by lowest ranked captain (first player)
 
