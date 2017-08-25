@@ -65,7 +65,7 @@ namespace KingsAndQueensHat.TeamGeneration
                 // score moves by factor times number of games played
 
                 var experienceFactor = player.SkillLevel.Value / 100M;
-                if (player.GamesPlayed == 0) experienceFactor += experienceFactor; // double the effect if they haven't played any games yet
+                if (player.GamesPlayed == 0 && rounds.Count() > 1) experienceFactor += experienceFactor; // double the effect if they haven't played any games yet, and we are into the league (not round 1)
                 var winPercentFactor = (player.WinPercent - 50M) / 100; //  this a negative factor for win % < 50, positive for > 50
                 var adjustedScore = averageScore + experienceFactor + winPercentFactor * player.GamesPlayed; // if they haven't played any games - makes no difference
                 player.AdjustedScore = Math.Max(player.GameScore, adjustedScore);
