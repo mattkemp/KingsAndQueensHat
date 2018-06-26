@@ -19,8 +19,9 @@ namespace KingsAndQueensHat.Model
             
             // default values
             NumberOfGenerations = 1000000;
-	        Algorithm2 = true; // use Algo2 by default now
-	        LoggingOn = false;
+            Algorithm2 = true; // use Algo2 by default now
+            LoggingOn = false;
+            EvenRoundsGroupBest = false;
             SkillLevels = new ObservableCollection<SkillLevel>();
             SkillLevels.Add(new SkillLevel { Name = "Novice", Value = 10 });
             SkillLevels.Add(new SkillLevel { Name = "Beginner", Value = 30 });
@@ -90,6 +91,22 @@ namespace KingsAndQueensHat.Model
                 if (value != _loggingOn)
                 {
                     _loggingOn = value;
+                    Save();
+                }
+            }
+        }
+
+        private bool _evenRoundsGroupBest;
+        public bool EvenRoundsGroupBest {
+            get
+            {
+                return _evenRoundsGroupBest;
+            }
+            set
+            {
+                if (value != _evenRoundsGroupBest)
+                {
+                    _evenRoundsGroupBest = value;
                     Save();
                 }
             }

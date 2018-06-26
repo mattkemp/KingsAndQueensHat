@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using KingsAndQueensHat.Model;
+using KingsAndQueensHat.Properties;
 
 namespace KingsAndQueensHat.TeamGeneration
 {
@@ -13,11 +14,12 @@ namespace KingsAndQueensHat.TeamGeneration
         private List<Team> _teams;
         public bool LoggingOn { get; set; }
         public string LoggingPath { get; set; }
+        public bool EvenRoundsGroupBest { get; set; }
+        public List<HatRound> Rounds { get; set; }
 
-        public List<Team> Generate(IPlayerProvider playerProvider, int numTeams, List<HatRound> rounds)
+        public List<Team> Generate(IPlayerProvider playerProvider, int numTeams)
         {
-
-            PopulateRoundResults(rounds, playerProvider);
+            PopulateRoundResults(Rounds, playerProvider);
 
             // create teams and distribute players
             _teams = Enumerable.Range(0, numTeams)
@@ -55,8 +57,8 @@ namespace KingsAndQueensHat.TeamGeneration
 
             // calculate adjusted scores
             var averageScore =0M;
-            var playersWithMoreThanOneGame = playerProvider.AllPlayers.Where(x => x.GamesPlayed > 0).ToList();
-            if(playersWithMoreThanOneGame.Count > 0) averageScore = Convert.ToDecimal(playersWithMoreThanOneGame.Average(x => x.GameScore));
+            var playersWithAtLeastOneGame = playerProvider.AllPlayers.Where(x => x.GamesPlayed > 0).ToList();
+            if(playersWithAtLeastOneGame.Count > 0) averageScore = Convert.ToDecimal(playersWithAtLeastOneGame.Average(x => x.GameScore));
             foreach (var player in playerProvider.AllPlayers)
             {
                 // adjusted score is so that players who have missed games, but are good (high win%) don't get treated like bad players
@@ -92,18 +94,39 @@ namespace KingsAndQueensHat.TeamGeneration
             if (LoggingOn) File.AppendAllText(LoggingPath, lineToWrite + Environment.NewLine);
         }
 
-        private List<Team> DistributePlayers()
-        {
-            do
-            {
+        private List<Team> DistributePlayers() {
+            var aboutToMakeAnEvenNumberRound = Rounds.Count % 2 == 1;
+
+            if (_teams.Count > 2 && EvenRoundsGroupBest && aboutToMakeAnEvenNumberRound) {
+                // every second round, put all the best players in the first two teams, then distribute the rest as normal
+                
+                var howManyPeopleForTheseTeams = Math.Floor((decimal)_presentPlayers.Count / _teams.Count);
+
+                // reduce the team list to just two, so everything else works as normal
+                var remainingTeams = _teams.ToList(); // copy it
+                _teams.RemoveRange(2,_teams.Count - 2);
+                remainingTeams.RemoveRange(0,2);
+
+                do {
+                    // take top x men and distribute
+                    AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList()), true);
+                    // take top x women and distribute
+                    AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList()), true);
+                } while (_teams.Min(x => x.PlayerCount) < howManyPeopleForTheseTeams);
+
+                // then put back the remaining teams and continue distributing as normal
+                _teams.AddRange(remainingTeams);
+            }
+
+            do {
                 // take top x men and distribute
-                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList()), false, true);
+                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList()), true);
                 // take top x women and distribute
-                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList()), true, true);
+                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList()), true);
                 // take bottom x men and distribute
-                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), false, false);
+                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), false);
                 // take bottom x women and distribute
-                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), false, false);
+                AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), false);
 
             } while (_presentPlayers.Any());
 
@@ -134,7 +157,7 @@ namespace KingsAndQueensHat.TeamGeneration
             return availablePlayers;
         }
 
-        private void AssignTeam(List<Player> players, bool isTopWomen, bool topFirst) // no defaults on these params to make it more obvious
+        private void AssignTeam(List<Player> players, bool topFirst) // no defaults on these params to make it more obvious
         {
             if (!players.Any()) return;
             var gender = players.First().Gender;
@@ -143,7 +166,9 @@ namespace KingsAndQueensHat.TeamGeneration
             for (var i = 0; i < _teams.Count; i++) { // if we have four teams, run through four times - it *should* be even teams after a round of this, but sometimes isn't (which is ok)
                 if (!players.Any()) return;
                 var thisPlayer = players.First();
+
                 GetNextTeam(topFirst, gender, aboutToRunOutOfPlayers).AddPlayer(thisPlayer);
+
                 players.Remove(thisPlayer); // remove from the temp list we are working with now
                 _presentPlayers.Remove(thisPlayer); // remove from the master player list
             }

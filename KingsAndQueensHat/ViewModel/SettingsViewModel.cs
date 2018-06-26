@@ -51,6 +51,16 @@ namespace KingsAndQueensHat.ViewModel
                 _settings.LoggingOn = value;
             }
         }
+        public bool EvenRoundsGroupBest {
+            get
+            {
+                return _settings.EvenRoundsGroupBest;
+            }
+            set
+            {
+                _settings.EvenRoundsGroupBest = value;
+            }
+        }
 
         public IEnumerable<SkillLevel> SkillLevels
         {

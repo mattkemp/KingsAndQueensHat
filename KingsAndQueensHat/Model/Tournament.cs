@@ -154,10 +154,12 @@ namespace KingsAndQueensHat.Model
             {
                 var algo2 = new Algorithm2() {
                     LoggingOn = Settings.LoggingOn,
-                    LoggingPath = _storage.LoggingPath
+                    EvenRoundsGroupBest = Settings.EvenRoundsGroupBest,
+                    LoggingPath = _storage.LoggingPath,
+                    Rounds = Rounds.ToList()
                 };
 
-                teams = algo2.Generate(PlayerProvider, teamCount, Rounds.ToList());
+                teams = algo2.Generate(PlayerProvider, teamCount);
             } else
             {
                 var numTeamGens = Settings.NumberOfGenerations;
