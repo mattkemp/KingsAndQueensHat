@@ -19,7 +19,7 @@ namespace KingsAndQueensHat.TeamGeneration
 
         public List<Team> CreateTeams(IPlayerProvider playerProvider)
         {
-            var teams = Enumerable.Range(0, NumTeams).Select(i => new Team(string.Format("Team {0}", i + 1))).ToList();
+            var teams = Enumerable.Range(0, NumTeams).Select(i => new Team(i + 1)).ToList();
 
             // We restart the snaking per gender so that players should have good matchups. However, this has
             // the possible side effect of creating one team with 2 more players than their opponent (one more 

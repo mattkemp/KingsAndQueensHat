@@ -5,3 +5,4 @@ TestData/
 TestData.csv
 /KingsAndQueensHat/*.user
 /.vs/KingsAndQueensHat/v15/sqlite3/*.ide
+.vs

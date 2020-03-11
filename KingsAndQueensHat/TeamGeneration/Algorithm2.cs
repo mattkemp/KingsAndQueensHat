@@ -23,7 +23,7 @@ namespace KingsAndQueensHat.TeamGeneration
 
             // create teams and distribute players
             _teams = Enumerable.Range(0, numTeams)
-                .Select(i => new Team(string.Format("Team {0} ({1})", i + 1, i % 2 == 0 ? "light" : "dark")))
+                .Select(i => new Team(i+1))
                 .ToList();
             return DistributePlayers();
         }

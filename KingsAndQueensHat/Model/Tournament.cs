@@ -81,10 +81,11 @@ namespace KingsAndQueensHat.Model
                     }
 
                     var teamList = new List<Team>();
+					var i = 1;
                     foreach (XmlNode team in teams)
                     {
-                        var teamName = team.SelectSingleNode("Name").InnerText;
-                        Team t = new Team(teamName);
+                        //var teamName = team.SelectSingleNode("Name").InnerText;
+                        Team t = new Team(i);
                         var players = team.SelectNodes("Players/Player");
 
                         // Basic validation
@@ -111,7 +112,8 @@ namespace KingsAndQueensHat.Model
                         }
 
                         teamList.Add(t);
-                    }
+						i++;
+					}
                     var round = new HatRound(teamList, file);
                     AddRound(round);
                 }
@@ -152,14 +154,15 @@ namespace KingsAndQueensHat.Model
 
             if (Settings.Algorithm2)
             {
-                var algo2 = new Algorithm2() {
+                //var algo = new Algorithm2() {
+                var algo = new Algorithm3() {
                     LoggingOn = Settings.LoggingOn,
                     EvenRoundsGroupBest = Settings.EvenRoundsGroupBest,
                     LoggingPath = _storage.LoggingPath,
                     Rounds = Rounds.ToList()
                 };
 
-                teams = algo2.Generate(PlayerProvider, teamCount);
+                teams = algo.Generate(PlayerProvider, teamCount);
             } else
             {
                 var numTeamGens = Settings.NumberOfGenerations;

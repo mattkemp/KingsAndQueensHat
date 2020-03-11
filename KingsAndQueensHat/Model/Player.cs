@@ -46,6 +46,7 @@ namespace KingsAndQueensHat.Model
         public string Name { get; set; }
 
         public Gender Gender { get; set; }
+        public decimal Handicap { get; set; }
 
         [XmlIgnore]
         public SkillLevel SkillLevel 

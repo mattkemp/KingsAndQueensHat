@@ -16,15 +16,14 @@ namespace KingsAndQueensHat.Model
 {
     public class Team : INotifyPropertyChanged
     {
-        public string Name { get; set; }
+        public int Number { get; set; }
         private CommandHandler _addPlayerCommand;
         private CommandHandler _wonCommand;
         private CommandHandler _lostCommand;
         private CommandHandler _drewCommand;
 
-        public Team(string name)
-        {
-            Name = name;
+        public Team(int number) {
+			Number = number;
             Players = new ObservableCollection<Player>();
             GameResult = GameResult.NoneYet;
         }
@@ -36,7 +35,11 @@ namespace KingsAndQueensHat.Model
         {
         }
 
-        public event EventHandler OnGameDone;
+		public string Name {
+			get { return string.Format("Team {0} ({1})", Number, Number % 2 == 0 ? "dark" : "light") ; }
+		}
+ 
+		public event EventHandler OnGameDone;
         public event EventHandler<PlayerEventArgs> OnPlayerAdd;
 
         public ObservableCollection<Player> Players { get; private set; }
@@ -152,6 +155,35 @@ namespace KingsAndQueensHat.Model
         {
             get { return Players.Count; }
         }
+
+        [XmlIgnore]
+        public int NumberOfMenToAssign { get; set; }
+        [XmlIgnore]
+        public int NumberOfWomenToAssign { get; set; }
+
+		public bool IsNotFull(Gender gender) {
+			return !IsFull(gender);
+		}
+
+		public bool IsFull(Gender gender) {
+           return gender == Gender.Male ? 
+				Players.Count(x=>x.Gender == Gender.Male) >= NumberOfMenToAssign :
+				Players.Count(x=>x.Gender == Gender.Female) >= NumberOfWomenToAssign;
+		}
+		[XmlIgnore]
+		public bool IsAllFull 
+		{
+			get { return IsFull(Gender.Male) && IsFull(Gender.Female); }
+		}
+		
+		[XmlIgnore]
+		public int PlayersAssignedThisLoop { get; set; }
+		
+		[XmlIgnore]
+		public decimal HandicapTotal 
+		{
+			get { return Players.Sum(x=>x.Handicap); }
+		}
 
         [XmlIgnore]
         public int Men
@@ -286,7 +318,7 @@ namespace KingsAndQueensHat.Model
 
         public override string ToString()
         {
-            return string.Format("{0} Men, {1} Women. Skill: {2}", Men, Women, TotalSkill);
+            return string.Format("{3} :{4:0.0}: {0} Men, {1} Women. Skill: {2}", Men, Women, TotalSkill, Name, TotalAdjustedScore);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
