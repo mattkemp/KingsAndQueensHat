@@ -73,7 +73,8 @@ namespace KingsAndQueensHat.TeamGeneration
 				player.AdjustedScore = Math.Max(player.GameScore, adjustedScore); // whichever is higher
 			}
 
-			var averageAdjustedScore = Convert.ToDecimal(playersWithAtLeastOneGame.Average(x => x.AdjustedScore));
+			var averageAdjustedScore = 0M;
+			if (playersWithAtLeastOneGame.Count > 0) averageAdjustedScore = Convert.ToDecimal(playersWithAtLeastOneGame.Average(x => x.AdjustedScore));
 
 			_presentPlayers = Sort(playerProvider.PresentPlayers().ToList());
 			Log("Games played so far: " + rounds.Count() + "\n");
