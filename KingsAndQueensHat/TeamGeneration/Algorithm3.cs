@@ -14,7 +14,9 @@ namespace KingsAndQueensHat.TeamGeneration
 		public bool LoggingOn { get; set; }
 		public string LoggingPath { get; set; }
 		public bool EvenRoundsGroupBest { get; set; }
+		public bool IsEvenRoundAndWeAreDoingBottomPlayersNow { get; set; }
 		public List<HatRound> Rounds { get; set; }
+		private const double HandicapPowerNumber = 1.2;
 
 		public List<Team> Generate(IPlayerProvider playerProvider, int numTeams)
 		{
@@ -24,7 +26,10 @@ namespace KingsAndQueensHat.TeamGeneration
 			_teams = Enumerable.Range(0, numTeams)
 				.Select(i => new Team(i+1))
 				.ToList();
-			return DistributePlayers();
+
+			DistributePlayers();
+			
+			return _teams;
 		}
 
 		private void PopulateRoundResults(IEnumerable<HatRound> rounds, IPlayerProvider playerProvider)
@@ -33,10 +38,14 @@ namespace KingsAndQueensHat.TeamGeneration
 			Log(String.Format("\nLog time: {0}", DateTime.Now.ToString("dd MMM yyyy HH:mm:ss")));
 
 			// reset the values
+			var seed = int.Parse(DateTime.Now.ToString("yyyyMMdd")); // seed with today so can reproduce when testing
+			var r = new Random(seed); // tested and this works
+
 			foreach (var player in playerProvider.AllPlayers)
 			{
 				player.GamesPlayed = 0;
 				player.NumberOfWins = 0;
+				player.RandomForSort = r.Next();
 			}
 
 			// calculate win percentages
@@ -76,27 +85,16 @@ namespace KingsAndQueensHat.TeamGeneration
 			var averageAdjustedScore = 0M;
 			if (playersWithAtLeastOneGame.Count > 0) averageAdjustedScore = Convert.ToDecimal(playersWithAtLeastOneGame.Average(x => x.AdjustedScore));
 
-			_presentPlayers = Sort(playerProvider.PresentPlayers().ToList());
+			_presentPlayers = Sort(playerProvider.PresentPlayers().ToList(), true);
 			Log("Games played so far: " + rounds.Count() + "\n");
 			foreach (var player in _presentPlayers) {
 				// figure out handicap
-				var handicapPower = 1.2; // i.e. 7 points above average = 7^1.2 = handicap
 				var diffToAverage = player.AdjustedScore - averageAdjustedScore;
 				player.Handicap = diffToAverage >= 0
-					? (decimal)Math.Pow((double)diffToAverage, handicapPower)
-					: (decimal)Math.Pow((double)Math.Abs(diffToAverage), handicapPower) * -1;
+					? (decimal)Math.Pow((double)diffToAverage, HandicapPowerNumber)
+					: (decimal)Math.Pow((double)Math.Abs(diffToAverage), HandicapPowerNumber) * -1;
 				
-				// logging
-				Log(String.Format("{0}\t{4}\tPlayed:{6}\tPoints/Adj:{5}/{1}\tHCap:{7}\tWin:{2}%\tXP:{3}"
-					, player.Name.PadRight(20)
-					, player.AdjustedScore.ToString("0.00").PadLeft(5)
-					, player.WinPercent.ToString("0").PadLeft(3)
-					, player.SkillLevel.Value.ToString().PadLeft(3)
-					, player.Gender
-					, player.GameScore.ToString().PadLeft(2)
-					, player.GamesPlayed.ToString().PadLeft(2)
-					, player.Handicap.ToString("0.00").PadLeft(5)
-					));
+				Log(player.ToString());
 			}
 		}
 
@@ -105,13 +103,10 @@ namespace KingsAndQueensHat.TeamGeneration
 			if (LoggingOn) File.AppendAllText(LoggingPath, lineToWrite + Environment.NewLine);
 		}
 
-		private List<Team> DistributePlayers() {
+		private void DistributePlayers() {
 
 			// work out how many players will be in each team up front
-			Log("");
-			SetEachTeamsNumberOfPlayersToAssign(Gender.Male, true);
-			SetEachTeamsNumberOfPlayersToAssign(Gender.Female, true);
-			Log("");
+			SetEachTeamsNumberOfPlayersToAssign();
 
 			var evenNumberedRound = Rounds.Count % 2 == 1;
 
@@ -123,44 +118,81 @@ namespace KingsAndQueensHat.TeamGeneration
 				_teams.RemoveRange(2,_teams.Count - 2);
 				remainingTeams.RemoveRange(0,2);
 
-				do {
-					// take top x men and distribute
-					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList()), true);
-					// take top x women and distribute
-					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList()), true);
-				} while (_teams.Any(x=> !x.IsAllFull));
+				// split out top players (so we can do top and bottom team assignment like normal)
+				var topPlayers = new List<Player>();
+				var remainingPlayers = new List<Player>();
+				var totalMen = _teams.Sum(x => x.NumberOfMenToAssign);
+				var totalWomen = _teams.Sum(x => x.NumberOfWomenToAssign);
+				foreach (var player in Sort(_presentPlayers.ToList(), true)) {
+					switch (player.Gender) {
+						case Gender.Male:
+							if (totalMen > 0) {
+								topPlayers.Add(player);
+								totalMen--;
+							}
+							else {
+								remainingPlayers.Add(player);
+							}
 
-				// then put back the remaining teams and continue distributing as normal
+							break;
+						case Gender.Female:
+							if (totalWomen > 0) {
+								topPlayers.Add(player);
+								totalWomen--;
+							}
+							else {
+								remainingPlayers.Add(player);
+							}
+
+							break;
+					}
+				}
+
+				_presentPlayers = topPlayers;
+				AssignTopAndBottom();
+
+				// then put back the remaining teams and players and continue distributing as normal
 				_teams.AddRange(remainingTeams);
+				_presentPlayers = remainingPlayers;
+				IsEvenRoundAndWeAreDoingBottomPlayersNow = true;
 			}
 
 			// normal team distribution
-			do {
-				// take top x men and distribute
-				AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList()), true);
-				// take top x women and distribute
-				AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList()), true);
-				// take bottom x men and distribute
-				AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), false);
-				// take bottom x women and distribute
-				AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), false);
-
-			} while (_presentPlayers.Any());
-
-			return _teams;
+			AssignTopAndBottom();
 		}
 
-		private static List<Player> Sort(List<Player> availablePlayers, bool topFirst = true)
+		private void AssignTopAndBottom() {
+			do {				
+				if (IsEvenRoundAndWeAreDoingBottomPlayersNow) {
+					// weird first case 
+					IsEvenRoundAndWeAreDoingBottomPlayersNow = false; // reset this
+
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), true); // worst players, best teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), true); // worst players, best teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), true), false); // best players, worst teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), true), false); // best players, worst teams
+				}
+				else {
+					// normal
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), true), false); // best players, worst teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), true), false); // best players, worst teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), true); // worst players, best teams
+					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), true); // worst players, best teams
+				}
+				
+
+			} while (_teams.Any(x=> !x.IsAllFull));
+		}
+
+		private static List<Player> Sort(List<Player> availablePlayers, bool topFirst)
 		{
-			var seed = int.Parse(DateTime.Now.ToString("yyyyMMdd")); // seed with today so can reproduce when testing
-			var r = new Random(seed); // tested and this works
 			if (topFirst)
 			{
 				availablePlayers = availablePlayers
 					.OrderByDescending(x => x.AdjustedScore)
 					.ThenByDescending(x => x.WinPercent)
 					.ThenByDescending(x => x.SkillLevel.Value)
-					.ThenByDescending(x => r.Next()) // so it isn't just alphabetic with all other things being equal
+					.ThenByDescending(x => x.RandomForSort) // so it isn't just alphabetic with all other things being equal
 					.ToList();
 			} else
 			{
@@ -168,14 +200,14 @@ namespace KingsAndQueensHat.TeamGeneration
 					.OrderBy(x => x.AdjustedScore)
 					.ThenBy(x => x.WinPercent)
 					.ThenBy(x => x.SkillLevel.Value)
-					.ThenBy(x => r.Next()) // so it isn't just alphabetic with all other things being equal
+					.ThenBy(x => x.RandomForSort) // so it isn't just alphabetic with all other things being equal
 					.ToList();
 			}
 
 			return availablePlayers;
 		}
 
-		private void AssignTeam(List<Player> players, bool topFirst) // no defaults on these params to make it more obvious
+		private void AssignTeam(List<Player> players, bool bestFirst)
 		{
 			// given the list of players, this will assign at least one to each team, but based on handicap often one will get a couple
 			// stops when each team has been given at least one
@@ -196,17 +228,20 @@ namespace KingsAndQueensHat.TeamGeneration
 				// if teams are full then break out
 				if(_teams.All(x => x.IsFull(gender))) return;
 
-				var team = GetNextTeam(topFirst, gender);
+				var team = GetNextTeam(bestFirst, gender);
+				if (team == null) {
+					return;
+				}
 
 				var previousTotalHandicap = team.HandicapTotal;
 				team.AddPlayer(thisPlayer);
-				Log(String.Format("{0} => T{1} {2:0.00} {3}{4:0.00} = {5:0.00}"
-					, thisPlayer.Name
+				Log(String.Format("{0} => T{1} {2} {3}{4} ={5}"
+					, thisPlayer.Name.PadRight(20)
 					, team.Number
-					, previousTotalHandicap
-					, thisPlayer.Handicap >= 0 ? "+" : ""
-					, thisPlayer.Handicap
-					, team.HandicapTotal
+					, previousTotalHandicap.ToString("0.00").PadLeft(5)
+					, thisPlayer.Handicap >= 0 ? "+" : "-"
+					, Math.Abs(thisPlayer.Handicap).ToString("0.00").PadRight(5)
+					, team.HandicapTotal.ToString("0.00").PadLeft(6)
 					));
 				
 				team.PlayersAssignedThisLoop++;
@@ -214,18 +249,101 @@ namespace KingsAndQueensHat.TeamGeneration
 				players.Remove(thisPlayer); // remove from the temp list we are working with now
 				_presentPlayers.Remove(thisPlayer); // remove from the master player list
 
-			} while (_teams.Any(x => x.PlayersAssignedThisLoop == 0));
+			} while (_teams.Any(x => !x.IsAllFull && x.PlayersAssignedThisLoop == 0));
 		}
 
-		private Team GetNextTeam(bool topFirst, Gender gender) {
-			return topFirst ? 
-				_teams.Where(x=>x.IsNotFull(gender)).OrderBy(x => x.HandicapTotal).ThenBy(x=>x.Number).First() : 
-				_teams.Where(x=>x.IsNotFull(gender)).OrderByDescending(x => x.HandicapTotal).ThenBy(x=>x.Number).First();
+		private Team GetNextTeam(bool bestTeamsFirst, Gender gender) {
+			// find first team that isn't full, sort by handicap, team number
+			// bestTeamsFirst normally means we are assigning a bad player to the best teams
+			// when assigning good players to bad teams (bestTeamsFirst=false) we only put one on each team (see && x.PlayersAssignedThisLoop == 0)
+			// because we want top ladies versing each other, we reverse sort on the Team Number to make sure that happens (if handicapTotals are same)
+
+			var ladyReverseSort = (gender == Gender.Female) ? -1 : 1;
+
+			return bestTeamsFirst ? 
+				_teams.Where(x=>x.IsNotFull(gender)).OrderByDescending(x => x.HandicapTotal).ThenBy(x=> x.Number).FirstOrDefault() : 
+				_teams.Where(x=>x.IsNotFull(gender) && x.PlayersAssignedThisLoop == 0).OrderBy(x => x.HandicapTotal).ThenBy(x=>x.Number*ladyReverseSort).FirstOrDefault();
 		}
 
-		private void SetEachTeamsNumberOfPlayersToAssign(Gender gender, bool shouldFirstTeamsHaveMorePlayers) {
-			var logTeamNumbers = "";
+		private void SetEachTeamsNumberOfPlayersToAssign() {
 			
+			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Male);
+			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Female);
+
+			// we want even players per teams
+/*
+example where it would be wrong (24 players - should be 6 per team):
+T1: 4M, T2: 3M, T3: 3M, T4: 3M
+T1: 3F, T2: 3F, T3: 3F, T4: 2F
+=> 7 on the first team and only 5 on the last
+fixed using maxPerTeam of 6
+
+another wrong example (21 players - should be 5 per team with one extra somewhere)
+T1 3M 3F
+T2 3M 3F
+T3 3M 2F
+T4 2M 2F
+=> should be:
+T1 2M 3F => one M off
+T2 2M 3F => one M off
+T3 3M 2F => no change, then one M on (after T4 gets one - due to desc team number sort)
+T4 3M 2F => one M on
+
+*/			
+			var preciseNumberPerTeam = (decimal)_presentPlayers.Count / _teams.Count;
+			var genderToMove = Gender.Male;
+			var numberOfPeopleToMove = 0;
+			//var maxPerTeam = Math.Ceiling(preciseNumberPerTeam); // yes, ceil(6) == 6
+			var maxPerTeam = Math.Round(preciseNumberPerTeam);
+			// does rounding the precise number take us up or down?
+			// if precise = 5.75 then most teams will have 6 people, but minority will have 5
+			// if precise = 5.25 then most teams will have 5 people, but minority will have 6
+
+
+
+			// do we have any teams with more than max?
+			// take 1 off these teams ( M>F ? M-- : F--; ) <= this sets the gender we are moving - it's only ever one
+			// then sort teams by TotalNumberToAssign asc to get the lowest ones first
+			// while numberOfPeopleToMove > 0, add one
+
+			// removals
+			foreach (var team in _teams) {
+				if (team.TotalNumberToAssign > maxPerTeam) {
+					// remove one (always only one)
+					numberOfPeopleToMove++;
+					if (team.NumberOfWomenToAssign > team.NumberOfMenToAssign) {
+						team.NumberOfWomenToAssign--;
+						genderToMove = Gender.Female;
+					}
+					else {
+						team.NumberOfMenToAssign--;
+					}
+				}
+			}
+
+			// additions
+			foreach (var team in _teams.OrderBy(x=>x.TotalNumberToAssign).ThenByDescending(x=>x.Number)) {
+				if (numberOfPeopleToMove == 0) break;
+				
+				if (genderToMove == Gender.Male) {
+					team.NumberOfMenToAssign++;
+				}
+				else {
+					team.NumberOfWomenToAssign++;
+				}
+				numberOfPeopleToMove--;
+			}
+
+			// logging
+			Log("");
+			foreach (var team in _teams) {
+				Log($"T{team.Number} {team.NumberOfMenToAssign}M {team.NumberOfWomenToAssign}F");
+			}
+			Log("");
+
+		}
+
+		private void SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender gender) {
 			for (int i = 0; i < _teams.Count; i++)
 			{
 				var playersRemaining = _presentPlayers.Count(x=>x.Gender==gender) 
@@ -233,20 +351,15 @@ namespace KingsAndQueensHat.TeamGeneration
 
 				var preciseNumberPerTeam = (decimal)playersRemaining / (_teams.Count-i);
 
-				var forThisTeam = shouldFirstTeamsHaveMorePlayers
-					? (int)Math.Ceiling(preciseNumberPerTeam)
-					: (int)Math.Floor(preciseNumberPerTeam);
+				var forThisTeam = (int) Math.Ceiling(preciseNumberPerTeam); // first teams default to more players (so they can sub in for later teams if necessary)
 
 				if (gender == Gender.Male) {
 					_teams[i].NumberOfMenToAssign = forThisTeam;
-					logTeamNumbers += String.Format("T{0}: {1}M, ", i+1, forThisTeam);
 				}
 				else {
 					_teams[i].NumberOfWomenToAssign = forThisTeam;
-					logTeamNumbers += String.Format("T{0}: {1}F, ", i+1, forThisTeam);
 				}
 			}
-			Log(logTeamNumbers);
 		}
 	}
 }

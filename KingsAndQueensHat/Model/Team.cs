@@ -14,159 +14,161 @@ using System.Collections.ObjectModel;
 
 namespace KingsAndQueensHat.Model
 {
-    public class Team : INotifyPropertyChanged
-    {
-        public int Number { get; set; }
-        private CommandHandler _addPlayerCommand;
-        private CommandHandler _wonCommand;
-        private CommandHandler _lostCommand;
-        private CommandHandler _drewCommand;
+	public class Team : INotifyPropertyChanged
+	{
+		public int Number { get; set; }
+		private CommandHandler _addPlayerCommand;
+		private CommandHandler _wonCommand;
+		private CommandHandler _lostCommand;
+		private CommandHandler _drewCommand;
 
-        public Team(int number) {
+		public Team(int number) {
 			Number = number;
-            Players = new ObservableCollection<Player>();
-            GameResult = GameResult.NoneYet;
-        }
+			Players = new ObservableCollection<Player>();
+			GameResult = GameResult.NoneYet;
+		}
 
-        /// <summary>
-        /// For serialisation
-        /// </summary>
-        protected Team()
-        {
-        }
+		/// <summary>
+		/// For serialisation
+		/// </summary>
+		protected Team()
+		{
+		}
 
 		public string Name {
 			get { return string.Format("Team {0} ({1})", Number, Number % 2 == 0 ? "dark" : "light") ; }
 		}
  
 		public event EventHandler OnGameDone;
-        public event EventHandler<PlayerEventArgs> OnPlayerAdd;
+		public event EventHandler<PlayerEventArgs> OnPlayerAdd;
 
-        public ObservableCollection<Player> Players { get; private set; }
+		public ObservableCollection<Player> Players { get; private set; }
 
-        public GameResult GameResult { get; set; }
+		public GameResult GameResult { get; set; }
 
-        /// <summary>
-        /// The game result as a string
-        /// </summary>
-        public string GameResultStr
-        {
-            get 
-            {
-                if (GameResult == GameResult.NoneYet)
-                {
-                    return string.Empty;
-                }
-                return GameResult.ToString();
-            }
-        }
+		/// <summary>
+		/// The game result as a string
+		/// </summary>
+		public string GameResultStr
+		{
+			get 
+			{
+				if (GameResult == GameResult.NoneYet)
+				{
+					return string.Empty;
+				}
+				return GameResult.ToString();
+			}
+		}
 
-        public Player _playerToAdd;
+		public Player _playerToAdd;
 
-        /// <summary>
-        /// The currently-selected item in the combo box
-        /// </summary>
-        public Player PlayerToAdd
-        {
-            get
-            {
-                return _playerToAdd;
-            }
-            set
-            {
-                if (_playerToAdd != value)
-                {
-                    _playerToAdd = value;
-                    AddPlayerCommand.RaiseCanExecuteChanged();
-                }
-            }
-        }
+		/// <summary>
+		/// The currently-selected item in the combo box
+		/// </summary>
+		public Player PlayerToAdd
+		{
+			get
+			{
+				return _playerToAdd;
+			}
+			set
+			{
+				if (_playerToAdd != value)
+				{
+					_playerToAdd = value;
+					AddPlayerCommand.RaiseCanExecuteChanged();
+				}
+			}
+		}
 
-        /// <summary>
-        /// Add a player to this team
-        /// </summary>
-        /// <param name="player"></param>
-        public void AddPlayer(Player player)
-        {
-            Players.Add(player);
-        }
+		/// <summary>
+		/// Add a player to this team
+		/// </summary>
+		/// <param name="player"></param>
+		public void AddPlayer(Player player)
+		{
+			Players.Add(player);
+		}
 
-        /// <summary>
-        /// Add a player to the team after pairings have already been generated
-        /// </summary>
-        public void AddPlayerLate(Player player, PlayerPairings pairings)
-        {
-            AddPlayer(player);
+		/// <summary>
+		/// Add a player to the team after pairings have already been generated
+		/// </summary>
+		public void AddPlayerLate(Player player, PlayerPairings pairings)
+		{
+			AddPlayer(player);
 
-            foreach (var pairing in PlayerPairings(player))
-            {
-                pairings.PlayedTogether(pairing);
-            }
-            player.GameDone(GameResult, Model.GameResult.NoneYet);
-        }
+			foreach (var pairing in PlayerPairings(player))
+			{
+				pairings.PlayedTogether(pairing);
+			}
+			player.GameDone(GameResult, Model.GameResult.NoneYet);
+		}
 
-        [XmlIgnore]
-        public int TotalSkill
-        {
-            get { return Players.Sum(p => 
-                {
-                    if (p.SkillLevel == null)
-                    {
-                        throw new InvalidDataException(string.Format("{0}: unknown skill", p.Skill));
-                    }
-                    return p.SkillLevel.Value;
-                }); }
-        }
+		[XmlIgnore]
+		public int TotalSkill
+		{
+			get { return Players.Sum(p => 
+				{
+					if (p.SkillLevel == null)
+					{
+						throw new InvalidDataException(string.Format("{0}: unknown skill", p.Skill));
+					}
+					return p.SkillLevel.Value;
+				}); }
+		}
 
-        [XmlIgnore]
-        public Dictionary<Gender, int> GenderSkills
-        {
-            get 
-            { 
-                return Players.GroupBy(p => p.Gender).Select(g => new {g.Key, Skill = g.Sum(p => p.SkillLevel.Value)}).ToDictionary(x => x.Key, x => x.Skill); 
-            }
-        }
+		[XmlIgnore]
+		public Dictionary<Gender, int> GenderSkills
+		{
+			get 
+			{ 
+				return Players.GroupBy(p => p.Gender).Select(g => new {g.Key, Skill = g.Sum(p => p.SkillLevel.Value)}).ToDictionary(x => x.Key, x => x.Skill); 
+			}
+		}
 
-        [XmlIgnore]
-        public decimal TotalAdjustedScore
-        {
-            get { return Players.Sum(x=>x.AdjustedScore); }
-        }
-        
-        /// <summary>
-        /// person on the team with the highest score. This can change as players are assigned!
-        /// </summary>
-        [XmlIgnore]
-        public Player Captain
-        {
-            get { return Players.OrderByDescending(x => x.AdjustedScore).First(); }
-        }
-        /// <summary>
-        /// first person assigned to the team
-        /// </summary>
-        [XmlIgnore]
-        public Player FirstPlayer
-        {
-            get { return Players.First(); }
-        }
+		[XmlIgnore]
+		public decimal TotalAdjustedScore
+		{
+			get { return Players.Sum(x=>x.AdjustedScore); }
+		}
+		
+		/// <summary>
+		/// person on the team with the highest score. This can change as players are assigned!
+		/// </summary>
+		[XmlIgnore]
+		public Player Captain
+		{
+			get { return Players.OrderByDescending(x => x.AdjustedScore).First(); }
+		}
+		/// <summary>
+		/// first person assigned to the team
+		/// </summary>
+		[XmlIgnore]
+		public Player FirstPlayer
+		{
+			get { return Players.First(); }
+		}
 
-        [XmlIgnore]
-        public int PlayerCount
-        {
-            get { return Players.Count; }
-        }
+		[XmlIgnore]
+		public int PlayerCount
+		{
+			get { return Players.Count; }
+		}
 
-        [XmlIgnore]
-        public int NumberOfMenToAssign { get; set; }
-        [XmlIgnore]
-        public int NumberOfWomenToAssign { get; set; }
+		[XmlIgnore]
+		public int NumberOfMenToAssign { get; set; }
+		[XmlIgnore]
+		public int NumberOfWomenToAssign { get; set; }
+		[XmlIgnore]
+		public int TotalNumberToAssign => NumberOfMenToAssign + NumberOfWomenToAssign;
 
 		public bool IsNotFull(Gender gender) {
 			return !IsFull(gender);
 		}
 
 		public bool IsFull(Gender gender) {
-           return gender == Gender.Male ? 
+		   return gender == Gender.Male ? 
 				Players.Count(x=>x.Gender == Gender.Male) >= NumberOfMenToAssign :
 				Players.Count(x=>x.Gender == Gender.Female) >= NumberOfWomenToAssign;
 		}
@@ -185,163 +187,172 @@ namespace KingsAndQueensHat.Model
 			get { return Players.Sum(x=>x.Handicap); }
 		}
 
-        [XmlIgnore]
-        public int Men
-        {
-            get { return Players.Count(p => p.Gender == Gender.Male); }
-        }
+		[XmlIgnore]
+		public int Men
+		{
+			get { return Players.Count(p => p.Gender == Gender.Male); }
+		}
 
-        [XmlIgnore]
-        public int Women
-        {
-            get { return Players.Count(p => p.Gender == Gender.Female); }
-        }
+		[XmlIgnore]
+		public int Women
+		{
+			get { return Players.Count(p => p.Gender == Gender.Female); }
+		}
 
-        public int OfGender(Gender gender)
-        {
-            return Players.Count(p => p.Gender == gender);
-        }
+		public int OfGender(Gender gender)
+		{
+			return Players.Count(p => p.Gender == gender);
+		}
 
-        /// <summary>
-        /// The full set of pairings between all players
-        /// </summary>
-        public IEnumerable<PlayerPairing> PlayerPairings()
-        {
-            for (int i = 0; i < PlayerCount; ++i)
-            {
-                for (int j = i + 1; j < PlayerCount; ++j)
-                {
-                    yield return new PlayerPairing(Players[i], Players[j]);
-                }
-            }
-        }
+		/// <summary>
+		/// The full set of pairings between all players
+		/// </summary>
+		public IEnumerable<PlayerPairing> PlayerPairings()
+		{
+			for (int i = 0; i < PlayerCount; ++i)
+			{
+				for (int j = i + 1; j < PlayerCount; ++j)
+				{
+					yield return new PlayerPairing(Players[i], Players[j]);
+				}
+			}
+		}
 
-        /// <summary>
-        /// The player pairings for a given player
-        /// </summary>
-        public IEnumerable<PlayerPairing> PlayerPairings(Player player)
-        {
-            foreach (var player2 in Players.Where(p => p != player))
-            {
-                yield return new PlayerPairing(player, player2);
-            }
-        }
+		/// <summary>
+		/// The player pairings for a given player
+		/// </summary>
+		public IEnumerable<PlayerPairing> PlayerPairings(Player player)
+		{
+			foreach (var player2 in Players.Where(p => p != player))
+			{
+				yield return new PlayerPairing(player, player2);
+			}
+		}
 
-        /// <summary>
-        /// For each pair of players, record that they played together
-        /// </summary>
-        public void AddToPairingsCount(PlayerPairings pairings)
-        {
-            foreach (var playerPairing in PlayerPairings())
-            {
-                pairings.PlayedTogether(playerPairing);
-            }
-        }
+		/// <summary>
+		/// For each pair of players, record that they played together
+		/// </summary>
+		public void AddToPairingsCount(PlayerPairings pairings)
+		{
+			foreach (var playerPairing in PlayerPairings())
+			{
+				pairings.PlayedTogether(playerPairing);
+			}
+		}
 
-        public void OnDelete(PlayerPairings pairings)
-        {
-            // Undo the players' scores
-            UpdateGameScore(Model.GameResult.NoneYet);
+		public void OnDelete(PlayerPairings pairings)
+		{
+			// Undo the players' scores
+			UpdateGameScore(Model.GameResult.NoneYet);
 
-            // Undo the players' pairings
-            foreach (var playerPairing in PlayerPairings())
-            {
-                pairings.UndoPlayerPairing(playerPairing);
-            }
-        }
+			// Undo the players' pairings
+			foreach (var playerPairing in PlayerPairings())
+			{
+				pairings.UndoPlayerPairing(playerPairing);
+			}
+		}
 
-        public void GameDone(GameResult gameResult)
-        {
-            UpdateGameScore(gameResult);
+		public void GameDone(GameResult gameResult)
+		{
+			UpdateGameScore(gameResult);
 
-            OnPropertyChanged("GameResultStr");
-            Won.RaiseCanExecuteChanged();
-            Drew.RaiseCanExecuteChanged();
-            Lost.RaiseCanExecuteChanged();
-            var @event = OnGameDone;
-            if (@event != null)
-            {
-                @event(this, new EventArgs());
-            }
-        }
+			OnPropertyChanged("GameResultStr");
+			Won.RaiseCanExecuteChanged();
+			Drew.RaiseCanExecuteChanged();
+			Lost.RaiseCanExecuteChanged();
+			var @event = OnGameDone;
+			if (@event != null)
+			{
+				@event(this, new EventArgs());
+			}
+		}
 
-        private void UpdateGameScore(GameResult gameResult)
-        {
-            var oldGameResult = GameResult;
-            GameResult = gameResult;
-            foreach (var player in Players)
-            {
-                player.GameDone(gameResult, oldGameResult);
-            }
-        }
+		private void UpdateGameScore(GameResult gameResult)
+		{
+			var oldGameResult = GameResult;
+			GameResult = gameResult;
+			foreach (var player in Players)
+			{
+				player.GameDone(gameResult, oldGameResult);
+			}
+		}
 
-        private void HandleAddPlayer()
-        {
-            var @event = OnPlayerAdd;
-            if (@event != null)
-            {
-                @event(this, new PlayerEventArgs(PlayerToAdd));
-            }
-        }
+		private void HandleAddPlayer()
+		{
+			var @event = OnPlayerAdd;
+			if (@event != null)
+			{
+				@event(this, new PlayerEventArgs(PlayerToAdd));
+			}
+		}
 
-        public CommandHandler AddPlayerCommand
-        {
-            get
-            {
-                return _addPlayerCommand ?? (_addPlayerCommand = new CommandHandler(() => HandleAddPlayer(), () => PlayerToAdd != null));
-            }
-        }
+		public CommandHandler AddPlayerCommand
+		{
+			get
+			{
+				return _addPlayerCommand ?? (_addPlayerCommand = new CommandHandler(() => HandleAddPlayer(), () => PlayerToAdd != null));
+			}
+		}
 
-        public CommandHandler Won
-        {
-            get
-            {
-                return _wonCommand ?? (_wonCommand = new CommandHandler(() => GameDone(GameResult.Won), () => GameResult != GameResult.Won));
-            }
-        }
+		public CommandHandler Won
+		{
+			get
+			{
+				return _wonCommand ?? (_wonCommand = new CommandHandler(() => GameDone(GameResult.Won), () => GameResult != GameResult.Won));
+			}
+		}
 
-        public CommandHandler Drew
-        {
-            get
-            {
-                return _drewCommand ?? (_drewCommand = new CommandHandler(() => GameDone(GameResult.Draw), () => GameResult != GameResult.Draw));
-            }
-        }
+		public CommandHandler Drew
+		{
+			get
+			{
+				return _drewCommand ?? (_drewCommand = new CommandHandler(() => GameDone(GameResult.Draw), () => GameResult != GameResult.Draw));
+			}
+		}
 
-        public CommandHandler Lost
-        {
-            get
-            {
-                return _lostCommand ?? (_lostCommand = new CommandHandler(() => GameDone(GameResult.Lost), () => GameResult != GameResult.Lost));
-            }
-        }
+		public CommandHandler Lost
+		{
+			get
+			{
+				return _lostCommand ?? (_lostCommand = new CommandHandler(() => GameDone(GameResult.Lost), () => GameResult != GameResult.Lost));
+			}
+		}
 
-        public override string ToString()
-        {
-            return string.Format("{3} :{4:0.0}: {0} Men, {1} Women. Skill: {2}", Men, Women, TotalSkill, Name, TotalAdjustedScore);
-        }
+		public override string ToString()
+		{
+			// only used for logging and ease of debugging
+			return string.Format("{2}: HCap:{6:0.0}, Adj:{3:0.0}, Men:{0}/{4}, Women:{1}/{5}", 
+				Men, 
+				Women, 
+				Name, 
+				TotalAdjustedScore,
+				NumberOfMenToAssign,
+				NumberOfWomenToAssign,
+				HandicapTotal
+				);
+		}
 
-        public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler PropertyChanged;
 
-        [NotifyPropertyChangedInvocator]
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
-        }
+		[NotifyPropertyChangedInvocator]
+		protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+		{
+			PropertyChangedEventHandler handler = PropertyChanged;
+			if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
+		}
 
-        /// <summary>
-        /// Permanently delete a player from the team
-        /// </summary>
-        internal void RemovePlayer(Player player, PlayerPairings pairings)
-        {
-            Players.Remove(player);
+		/// <summary>
+		/// Permanently delete a player from the team
+		/// </summary>
+		internal void RemovePlayer(Player player, PlayerPairings pairings)
+		{
+			Players.Remove(player);
 
-            // Undo the players' pairings
-            foreach (var playerPairing in PlayerPairings(player))
-            {
-                pairings.UndoPlayerPairing(playerPairing);
-            }
-        }
-    }
+			// Undo the players' pairings
+			foreach (var playerPairing in PlayerPairings(player))
+			{
+				pairings.UndoPlayerPairing(playerPairing);
+			}
+		}
+	}
 }

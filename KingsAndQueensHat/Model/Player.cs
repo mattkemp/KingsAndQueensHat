@@ -46,7 +46,6 @@ namespace KingsAndQueensHat.Model
         public string Name { get; set; }
 
         public Gender Gender { get; set; }
-        public decimal Handicap { get; set; }
 
         [XmlIgnore]
         public SkillLevel SkillLevel 
@@ -118,10 +117,28 @@ namespace KingsAndQueensHat.Model
         public decimal WinPercent { get { return GamesPlayed == 0 ? 0 : NumberOfWins/GamesPlayed*100; } }
         [XmlIgnore]
         public decimal AdjustedScore { get; set; }
+        [XmlIgnore]
+        public int RandomForSort { get; set; }
+        [XmlIgnore]
+        public decimal Handicap { get; set; }
+		[XmlIgnore]
+		public decimal HandicapPlusAdjusted => AdjustedScore + Handicap;
 
         public override string ToString()
         {
-            return string.Format("{0}: {1} (Score {2})", Name, Skill, GameScore);
+			// shows on the ad-hoc "add player to team" drop down on the Round screen
+			// also used for logging and ease of debugging
+			return String.Format("{0} {4} Played:{6} Points/Adj:{5}/{1} HCap:{7} Win:{2}% XP:{3}"
+				, Name.PadRight(20)
+				, AdjustedScore.ToString("0.00").PadLeft(5)
+				, WinPercent.ToString("0").PadLeft(3)
+				, SkillLevel.Value.ToString().PadLeft(3)
+				, Gender.ToString().PadRight(7)
+				, GameScore.ToString().PadLeft(2)
+				, GamesPlayed.ToString().PadLeft(2)
+				, Handicap.ToString("0.00").PadLeft(5)
+				, HandicapPlusAdjusted.ToString("0.00").PadLeft(6)
+			);
         }
 
         public void GameDone(GameResult gameResult, GameResult oldGameResult)
