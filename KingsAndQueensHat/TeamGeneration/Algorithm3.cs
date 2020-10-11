@@ -306,7 +306,7 @@ T4 3M 2F => one M on
 			// then sort teams by TotalNumberToAssign asc to get the lowest ones first
 			// while numberOfPeopleToMove > 0, add one
 
-			// removals
+			// removals =====================================
 			foreach (var team in _teams) {
 				if (team.TotalNumberToAssign > maxPerTeam) {
 					// remove one (always only one)
@@ -321,18 +321,33 @@ T4 3M 2F => one M on
 				}
 			}
 
-			// additions
+			// additions =====================================
+
+			// first of all make sure pairs of teams have the same numbers
+			var i = 0;
+			while (i + 1 < _teams.Count) {
+				var teamA = _teams[i];
+				var teamB = _teams[i + 1];
+				if (teamA.TotalNumberToAssign < teamB.TotalNumberToAssign) {
+					AddToTeamNumbers(teamA, genderToMove);
+					numberOfPeopleToMove--;
+				}
+				if (teamB.TotalNumberToAssign < teamA.TotalNumberToAssign) {
+					AddToTeamNumbers(teamB, genderToMove);
+					numberOfPeopleToMove--;
+				}
+
+				i = i + 2;
+			}
+			
+			// then start with the teams with the least number of players, and start from the bottom
 			foreach (var team in _teams.OrderBy(x=>x.TotalNumberToAssign).ThenByDescending(x=>x.Number)) {
 				if (numberOfPeopleToMove == 0) break;
-				
-				if (genderToMove == Gender.Male) {
-					team.NumberOfMenToAssign++;
-				}
-				else {
-					team.NumberOfWomenToAssign++;
-				}
+				AddToTeamNumbers(team, genderToMove);
 				numberOfPeopleToMove--;
 			}
+			
+			// =====================================
 
 			// logging
 			Log("");
@@ -341,6 +356,15 @@ T4 3M 2F => one M on
 			}
 			Log("");
 
+		}
+
+		private void AddToTeamNumbers(Team team, Gender genderToMove) {
+			if (genderToMove == Gender.Male) {
+				team.NumberOfMenToAssign++;
+			}
+			else {
+				team.NumberOfWomenToAssign++;
+			}
 		}
 
 		private void SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender gender) {

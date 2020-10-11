@@ -11,6 +11,7 @@
             <RowDefinition Height="36"/>
             <RowDefinition Height="36"/>
             <RowDefinition Height="36"/>
+            <RowDefinition Height="36"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -19,11 +20,11 @@
         </Grid.ColumnDefinitions>
         <TextBlock Grid.Row="0" Grid.Column="0" FontSize="16" Margin="3,8,0,0"><Run Language="en-nz" Text="Algorithm 1: Number of Team Generations: "/></TextBlock>
         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NumberOfGenerations}" FontSize="16" VerticalContentAlignment="Center" Margin="0,5,1,5"/>
-        <CheckBox  Grid.Row="1" Grid.Column="0" Content="Use Algorithm 2" IsChecked="{Binding Algorithm2}" FontSize="16" Margin="6,7,0,9" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="184"/>
-        <CheckBox  Grid.Row="2" Grid.Column="0" Content="Turn on logging" IsChecked="{Binding LoggingOn}" FontSize="16" Margin="6,6,0,10" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="184"/>
-        <CheckBox  Grid.Row="2" Grid.Column="1" Content="Even rounds group best" IsChecked="{Binding EvenRoundsGroupBest}" FontSize="16" Margin="6,6,0,10" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="184"/>
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Skill Values:" FontSize="16" Margin="3,8,0,0"/>
-        <ItemsControl Grid.Row="4" Grid.ColumnSpan="2" Margin="5" ItemsSource="{Binding SkillLevels}">
+        <CheckBox  Grid.Row="1" Grid.Column="0" Content="Use Algorithm v3" IsChecked="{Binding Algorithm2}" FontSize="16" Margin="6,7,0,9" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="184"/>
+        <CheckBox  Grid.Row="2" Grid.Column="0" Content="Even rounds group best together" IsChecked="{Binding EvenRoundsGroupBest}" FontSize="16" Margin="6,6,0,10" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="280"/>
+        <CheckBox  Grid.Row="3" Grid.Column="0" Content="Turn on logging" IsChecked="{Binding LoggingOn}" FontSize="16" Margin="6,6,0,10" HorizontalAlignment="Left" VerticalAlignment="Center" Height="21" Width="184"/>
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Skill Values:" FontSize="16" Margin="3,8,0,0"/>
+        <ItemsControl Grid.Row="5" Grid.ColumnSpan="2" Margin="5" ItemsSource="{Binding SkillLevels}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Grid>
