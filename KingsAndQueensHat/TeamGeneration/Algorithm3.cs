@@ -179,7 +179,11 @@ namespace KingsAndQueensHat.TeamGeneration
 					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Male).ToList(), false), true); // worst players, best teams
 					AssignTeam(Sort(_presentPlayers.Where(x => x.Gender == Gender.Female).ToList(), false), true); // worst players, best teams
 				}
-				
+
+				if (_presentPlayers.Count == 0 && _teams.Any(x => !x.IsAllFull))
+				{
+					throw new Exception("run out of players, but teams aren't full yet!");
+				}
 
 			} while (_teams.Any(x=> !x.IsAllFull));
 		}
@@ -321,32 +325,38 @@ T4 3M 2F => one M on
 				}
 			}
 
-			// additions =====================================
+			// additions (only if we have some) =====================================
+			if (numberOfPeopleToMove > 0)
+			{
+				// first of all make sure pairs of teams have the same numbers
+				var i = 0;
+				while (i + 1 < _teams.Count)
+				{
+					var teamA = _teams[i];
+					var teamB = _teams[i + 1];
+					if (teamA.TotalNumberToAssign < teamB.TotalNumberToAssign)
+					{
+						AddToTeamNumbers(teamA, genderToMove);
+						numberOfPeopleToMove--;
+					}
+					if (teamB.TotalNumberToAssign < teamA.TotalNumberToAssign)
+					{
+						AddToTeamNumbers(teamB, genderToMove);
+						numberOfPeopleToMove--;
+					}
 
-			// first of all make sure pairs of teams have the same numbers
-			var i = 0;
-			while (i + 1 < _teams.Count) {
-				var teamA = _teams[i];
-				var teamB = _teams[i + 1];
-				if (teamA.TotalNumberToAssign < teamB.TotalNumberToAssign) {
-					AddToTeamNumbers(teamA, genderToMove);
+					i = i + 2;
+				}
+
+				// then start with the teams with the least number of players, and start from the bottom
+				foreach (var team in _teams.OrderBy(x => x.TotalNumberToAssign).ThenByDescending(x => x.Number))
+				{
+					if (numberOfPeopleToMove == 0) break;
+					AddToTeamNumbers(team, genderToMove);
 					numberOfPeopleToMove--;
 				}
-				if (teamB.TotalNumberToAssign < teamA.TotalNumberToAssign) {
-					AddToTeamNumbers(teamB, genderToMove);
-					numberOfPeopleToMove--;
-				}
+			}
 
-				i = i + 2;
-			}
-			
-			// then start with the teams with the least number of players, and start from the bottom
-			foreach (var team in _teams.OrderBy(x=>x.TotalNumberToAssign).ThenByDescending(x=>x.Number)) {
-				if (numberOfPeopleToMove == 0) break;
-				AddToTeamNumbers(team, genderToMove);
-				numberOfPeopleToMove--;
-			}
-			
 			// =====================================
 
 			// logging
