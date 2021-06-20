@@ -112,6 +112,7 @@ namespace KingsAndQueensHat.TeamGeneration
 
 			if (_teams.Count > 2 && EvenRoundsGroupBest && evenNumberedRound) {
 				// every second round, put all the best players in the first two teams, then distribute the rest as normal
+				// fixes the "I never play with Riley" issue where top 4 would always be split otherwise
 
 				// reduce the team list to just two, so everything else works as normal
 				var remainingTeams = _teams.ToList(); // copy it
@@ -274,56 +275,87 @@ namespace KingsAndQueensHat.TeamGeneration
 			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Male);
 			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Female);
 
-			// we want even players per teams
-/*
-example where it would be wrong (24 players - should be 6 per team):
-T1: 4M, T2: 3M, T3: 3M, T4: 3M
-T1: 3F, T2: 3F, T3: 3F, T4: 2F
-=> 7 on the first team and only 5 on the last
-fixed using maxPerTeam of 6
+			// we want even player numbers per teams (even if that means gender isn't even), the method "SetEachTeamsGenderSpecificNumberOfPlayersToAssign" above puts more in the first teams
+			// each pair should be the same if possible
+			// we are only ever moving one person off a team, because the initial allocation is normally pretty close
 
-another wrong example (21 players - should be 5 per team with one extra somewhere)
-T1 3M 3F
-T2 3M 3F
-T3 3M 2F
-T4 2M 2F
-=> should be:
-T1 2M 3F => one M off
-T2 2M 3F => one M off
-T3 3M 2F => no change, then one M on (after T4 gets one - due to desc team number sort)
-T4 3M 2F => one M on
+			#region Tests
+			/*
+example: - T1 too many, T4 too few
+	(24 players - precise=6, best=6):
+	T1 4M 3F
+	T2 3M 3F
+	T3 3M 3F
+	T4 3M 2F
+	=> should move M from T1 to T4
 
-*/			
+example: - T1 too many, T4 too few
+	(21 players - precise=5.25, best=5)
+	T1 3M 3F
+	T2 3M 3F
+	T3 3M 2F
+	T4 2M 2F
+	=> should be:
+	T1 2M 3F => one M off
+	T2 2M 3F => one M off (T1 and T2 are even now)
+	T4 3M 2F => one M on
+	...next loop...
+	T3 3M 2F => one M on (after T4 gets one - due to desc team number sort)
+
+example: T4 too few
+	(22 players - precise=5.5, best=6)
+	T1 3M 3F
+	T2 3M 3F
+	T3 3M 3F
+	T4 2M 2F
+	=> should be:
+	T1 3M 3F => leave as-is
+	T2 3M 3F => leave as-is
+	T3 2M 3F => one M off
+	T4 3M 2F => one M on
+
+example: - M are evenly spread already, only move an F
+	(21 players - precise=5.25, best=5)
+	T1 3M 3F
+	T2 3M 2F
+	T3 3M 2F
+	T4 3M 2F
+	=> should be:
+	T1 3M 2F => one F off
+	T2 3M 2F
+	T3 3M 2F
+	T4 3M 3F => one F on
+*/
+			#endregion
+
 			var preciseNumberPerTeam = (decimal)_presentPlayers.Count / _teams.Count;
 			var genderToMove = Gender.Male;
 			var numberOfPeopleToMove = 0;
-			//var maxPerTeam = Math.Ceiling(preciseNumberPerTeam); // yes, ceil(6) == 6
-			var maxPerTeam = Math.Round(preciseNumberPerTeam);
-			// does rounding the precise number take us up or down?
+			var bestNumberPerTeam = Math.Round(preciseNumberPerTeam);
 			// if precise = 5.75 then most teams will have 6 people, but minority will have 5
 			// if precise = 5.25 then most teams will have 5 people, but minority will have 6
 
-
-
-			// do we have any teams with more than max?
-			// take 1 off these teams ( M>F ? M-- : F--; ) <= this sets the gender we are moving - it's only ever one
-			// then sort teams by TotalNumberToAssign asc to get the lowest ones first
-			// while numberOfPeopleToMove > 0, add one
+			// do we have any teams with more than "best"?
+			// take 1 off these teams (first one sets the gender we are moving - it's only ever one)
 
 			// removals =====================================
+			var isAllTeamsMenTheSame = _teams.All(x=>x.NumberOfMenToAssign == _teams[0].NumberOfMenToAssign);
+
 			foreach (var team in _teams) {
-				if (team.TotalNumberToAssign > maxPerTeam) {
+				if (team.TotalNumberToAssign > bestNumberPerTeam) {
 					// remove one (always only one)
 					numberOfPeopleToMove++;
-					if (team.NumberOfWomenToAssign > team.NumberOfMenToAssign) {
-						team.NumberOfWomenToAssign--;
+					if (team.NumberOfWomenToAssign > team.NumberOfMenToAssign || isAllTeamsMenTheSame) {
 						genderToMove = Gender.Female;
+						team.NumberOfWomenToAssign--;
 					}
 					else {
 						team.NumberOfMenToAssign--;
 					}
 				}
 			}
+
+			// while numberOfPeopleToMove > 0, add people back
 
 			// additions (only if we have some) =====================================
 			if (numberOfPeopleToMove > 0)
@@ -345,10 +377,11 @@ T4 3M 2F => one M on
 						numberOfPeopleToMove--;
 					}
 
-					i = i + 2;
+					i += 2;
 				}
 
-				// then start with the teams with the least number of players, and start from the bottom
+				// then, if we have any more people left unmoved,
+				// start with the teams with the least number of players and highest team number (T4)
 				foreach (var team in _teams.OrderBy(x => x.TotalNumberToAssign).ThenByDescending(x => x.Number))
 				{
 					if (numberOfPeopleToMove == 0) break;
@@ -385,7 +418,7 @@ T4 3M 2F => one M on
 
 				var preciseNumberPerTeam = (decimal)playersRemaining / (_teams.Count-i);
 
-				var forThisTeam = (int) Math.Ceiling(preciseNumberPerTeam); // first teams default to more players (so they can sub in for later teams if necessary)
+				var forThisTeam = (int) Math.Ceiling(preciseNumberPerTeam);
 
 				if (gender == Gender.Male) {
 					_teams[i].NumberOfMenToAssign = forThisTeam;
