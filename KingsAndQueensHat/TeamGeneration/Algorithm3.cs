@@ -325,6 +325,18 @@ example: - M are evenly spread already, only move an F
 	T2 3M 2F
 	T3 3M 2F
 	T4 3M 3F => one F on
+
+example - even number of M's (10), not quite enough F (11)
+	(21 players - precise=5.25, best=5)
+	T1 3M 3F
+	T2 3M 3F
+	T3 2M 3F
+	T4 2M 2F
+	=> should be:
+	T1 2M 3F => one M off
+	T2 2M 3F => one M off
+	T3 3M 3F => one M on
+	T4 3M 2F => one M on
 */
 			#endregion
 
@@ -380,9 +392,13 @@ example: - M are evenly spread already, only move an F
 					i += 2;
 				}
 
-				// then, if we have any more people left unmoved,
-				// start with the teams with the least number of players and highest team number (T4)
-				foreach (var team in _teams.OrderBy(x => x.TotalNumberToAssign).ThenByDescending(x => x.Number))
+				// then, if we have any more people left unmoved, assign them
+				// start with the teams with the least number of players
+				// then if all equal, try to even up gender
+				// then highest team number (T4) because if all else is equal, may as well be the last team
+				foreach (var team in _teams.OrderBy(x => x.TotalNumberToAssign)
+					.ThenBy(x=> genderToMove == Gender.Male ? x.NumberOfMenToAssign : x.NumberOfWomenToAssign)
+					.ThenByDescending(x => x.Number))
 				{
 					if (numberOfPeopleToMove == 0) break;
 					AddToTeamNumbers(team, genderToMove);

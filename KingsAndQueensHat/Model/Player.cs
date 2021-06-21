@@ -128,7 +128,7 @@ namespace KingsAndQueensHat.Model
         {
 			// shows on the ad-hoc "add player to team" drop down on the Round screen
 			// also used for logging and ease of debugging
-			return String.Format("{0} {4} Played:{6} Points/Adj:{5}/{1} HCap:{7} Win:{2}% XP:{3}"
+			return String.Format("{0} {4} Played:{6} Points/Adj:{5}/{1} HCap:{7} Win:{2}% XP:{3} R:{9}"
 				, Name.PadRight(20)
 				, AdjustedScore.ToString("0.00").PadLeft(5)
 				, WinPercent.ToString("0").PadLeft(3)
@@ -138,6 +138,7 @@ namespace KingsAndQueensHat.Model
 				, GamesPlayed.ToString().PadLeft(2)
 				, Handicap.ToString("0.00").PadLeft(5)
 				, HandicapPlusAdjusted.ToString("0.00").PadLeft(6)
+				, (RandomForSort/100000000M).ToString("0.0").PadLeft(5)
 			);
         }
 
