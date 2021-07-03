@@ -105,14 +105,16 @@ namespace KingsAndQueensHat.TeamGeneration
 
 		private void DistributePlayers() {
 
-			// work out how many players will be in each team up front
-			SetEachTeamsNumberOfPlayersToAssign();
-
 			var evenNumberedRound = Rounds.Count % 2 == 1;
+			var doGroupBestPlayersInFirstTwoTeams = _teams.Count > 2 && EvenRoundsGroupBest && evenNumberedRound;
 
-			if (_teams.Count > 2 && EvenRoundsGroupBest && evenNumberedRound) {
+			// work out how many players will be in each team
+			SetEachTeamsNumberOfPlayersToAssign(doGroupBestPlayersInFirstTwoTeams);
+
+			if (doGroupBestPlayersInFirstTwoTeams) {
 				// every second round, put all the best players in the first two teams, then distribute the rest as normal
-				// fixes the "I never play with Riley" issue where top 4 would always be split otherwise
+				// fixes the "I never play with Riley" issue where top 4 people would always be split otherwise
+				// and can make a more fun game for people to be playing with similar levels (although it's really points based not ability)
 
 				// reduce the team list to just two, so everything else works as normal
 				var remainingTeams = _teams.ToList(); // copy it
@@ -270,12 +272,18 @@ namespace KingsAndQueensHat.TeamGeneration
 				_teams.Where(x=>x.IsNotFull(gender) && x.PlayersAssignedThisLoop == 0).OrderBy(x => x.HandicapTotal).ThenBy(x=>x.Number*ladyReverseSort).FirstOrDefault();
 		}
 
-		private void SetEachTeamsNumberOfPlayersToAssign() {
+		private void SetEachTeamsNumberOfPlayersToAssign(bool doGroupBestPlayersInFirstTwoTeams) {
 			
 			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Male);
 			SetEachTeamsGenderSpecificNumberOfPlayersToAssign(Gender.Female);
+			
+			var playersWithTopAtTheTop = Sort(_presentPlayers.ToList(), true);
+			var numberOfPlayersInFirstTwoTeams = _teams.Take(2).Sum(x=>x.TotalNumberToAssign);
+			var topPlayers = playersWithTopAtTheTop.Take(numberOfPlayersInFirstTwoTeams);
+			var isMoreMenInTopSectionOfPlayers = topPlayers.Count(x=>x.Gender == Gender.Male) > topPlayers.Count(x=>x.Gender == Gender.Female);
 
-			// we want even player numbers per teams (even if that means gender isn't even), the method "SetEachTeamsGenderSpecificNumberOfPlayersToAssign" above puts more in the first teams
+			// we want even player numbers per teams (even if that means gender isn't even), the
+			// method "SetEachTeamsGenderSpecificNumberOfPlayersToAssign" above puts more in the first teams
 			// each pair should be the same if possible
 			// we are only ever moving one person off a team, because the initial allocation is normally pretty close
 
@@ -337,6 +345,18 @@ example - even number of M's (10), not quite enough F (11)
 	T2 2M 3F => one M off
 	T3 3M 3F => one M on
 	T4 3M 2F => one M on
+			
+example - Even round so top half needed, 20 people (10M, 10F):
+	T1 3M 3F
+	T2 3M 3F
+	T3 2M 2F
+	T4 2M 2F
+	=> if there are more men in top half of sorted players, then put more men in teams 1 & 2:
+	T1 3M 2F => one F off
+	T2 3M 2F => one F off
+	T3 2M 3F => one F on
+	T4 2M 3F => one F on
+
 */
 			#endregion
 
@@ -357,12 +377,24 @@ example - even number of M's (10), not quite enough F (11)
 				if (team.TotalNumberToAssign > bestNumberPerTeam) {
 					// remove one (always only one)
 					numberOfPeopleToMove++;
-					if (team.NumberOfWomenToAssign > team.NumberOfMenToAssign || isAllTeamsMenTheSame) {
-						genderToMove = Gender.Female;
-						team.NumberOfWomenToAssign--;
-					}
+
+					if (doGroupBestPlayersInFirstTwoTeams && isMoreMenInTopSectionOfPlayers) {
+						if (!isAllTeamsMenTheSame && team.NumberOfMenToAssign > team.NumberOfWomenToAssign) {
+							team.NumberOfMenToAssign--;
+						}
+						else {
+							genderToMove = Gender.Female; // doesn't change after first loop, so is ok
+							team.NumberOfWomenToAssign--;
+						}
+					}							
 					else {
-						team.NumberOfMenToAssign--;
+						if (isAllTeamsMenTheSame || team.NumberOfWomenToAssign > team.NumberOfMenToAssign) {
+							genderToMove = Gender.Female; // doesn't change after first loop, so is ok
+							team.NumberOfWomenToAssign--;
+						}
+						else {
+							team.NumberOfMenToAssign--;
+						}
 					}
 				}
 			}
