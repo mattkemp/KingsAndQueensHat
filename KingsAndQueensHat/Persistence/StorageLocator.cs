@@ -56,7 +56,7 @@ namespace KingsAndQueensHat.Persistence
             int i = 1;
             do
             {
-                filename = System.IO.Path.Combine(Path, string.Format("{0}{1}", i, Constants.DataFileExtension));
+                filename = System.IO.Path.Combine(Path, string.Format("{0:00}{1}", i, Constants.DataFileExtension));
                 i++;
             } while (File.Exists(filename));
             return filename;
