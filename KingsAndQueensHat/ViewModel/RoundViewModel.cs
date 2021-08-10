@@ -54,9 +54,9 @@ namespace KingsAndQueensHat.ViewModel
         {
             get
             {
-                var playingPlayers = CurrentRound.Teams.SelectMany(t => t.Players);
-                var list = Tournament.AllPlayers.Except(playingPlayers).ToList();
-                return list;
+				if(CurrentRound == null) return new List<Player>(); // no non-players
+				var playingPlayers = CurrentRound.Teams.SelectMany(t => t.Players);
+				return Tournament.AllPlayers.Except(playingPlayers).ToList();
             }
         }
 

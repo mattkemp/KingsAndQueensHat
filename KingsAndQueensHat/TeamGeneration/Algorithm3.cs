@@ -363,7 +363,8 @@ example - Even round so top half needed, 20 people (10M, 10F):
 			var preciseNumberPerTeam = (decimal)_presentPlayers.Count / _teams.Count;
 			var genderToMove = Gender.Male;
 			var numberOfPeopleToMove = 0;
-			var bestNumberPerTeam = Math.Round(preciseNumberPerTeam);
+			// we need to round down if precise has .5
+			var bestNumberPerTeam = (preciseNumberPerTeam % 0.5M == 0) ? Math.Floor(preciseNumberPerTeam) : Math.Round(preciseNumberPerTeam);
 			// if precise = 5.75 then most teams will have 6 people, but minority will have 5
 			// if precise = 5.25 then most teams will have 5 people, but minority will have 6
 
@@ -402,8 +403,7 @@ example - Even round so top half needed, 20 people (10M, 10F):
 			// while numberOfPeopleToMove > 0, add people back
 
 			// additions (only if we have some) =====================================
-			if (numberOfPeopleToMove > 0)
-			{
+			while (numberOfPeopleToMove > 0) {
 				// first of all make sure pairs of teams have the same numbers
 				var i = 0;
 				while (i + 1 < _teams.Count)
@@ -424,18 +424,19 @@ example - Even round so top half needed, 20 people (10M, 10F):
 					i += 2;
 				}
 
-				// then, if we have any more people left unmoved, assign them
-				// start with the teams with the least number of players
+				// I think at this point all teams are guaranteed to be even (needs testing)
+				if(numberOfPeopleToMove == 0) break;
+				// so if we have any left over, choose a team to break the tie and begin again making sure pairs match
+
+				// start with the team with the least number of players
 				// then if all equal, try to even up gender
 				// then highest team number (T4) because if all else is equal, may as well be the last team
-				foreach (var team in _teams.OrderBy(x => x.TotalNumberToAssign)
+				var bestTeam = _teams.OrderBy(x => x.TotalNumberToAssign)
 					.ThenBy(x=> genderToMove == Gender.Male ? x.NumberOfMenToAssign : x.NumberOfWomenToAssign)
-					.ThenByDescending(x => x.Number))
-				{
-					if (numberOfPeopleToMove == 0) break;
-					AddToTeamNumbers(team, genderToMove);
-					numberOfPeopleToMove--;
-				}
+					.ThenByDescending(x => x.Number).First();
+				
+				AddToTeamNumbers(bestTeam, genderToMove);
+				numberOfPeopleToMove--;
 			}
 
 			// =====================================
