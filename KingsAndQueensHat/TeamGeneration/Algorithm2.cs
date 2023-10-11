@@ -38,6 +38,8 @@ namespace KingsAndQueensHat.TeamGeneration
             {
                 player.GamesPlayed = 0;
                 player.NumberOfWins = 0;
+                player.NumberOfDraws = 0;
+                player.NumberOfLosses = 0;
             }
 
             // calculate win percentages
@@ -51,6 +53,8 @@ namespace KingsAndQueensHat.TeamGeneration
                         if (p == null) continue;
                         p.GamesPlayed++;
                         if (team.GameResult == GameResult.Won) p.NumberOfWins++;
+                        if (team.GameResult == GameResult.Draw) p.NumberOfDraws++;
+                        if (team.GameResult == GameResult.Lost) p.NumberOfLosses++;
                     }
                 }
             }

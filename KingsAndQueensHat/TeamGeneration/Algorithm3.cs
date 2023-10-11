@@ -59,6 +59,8 @@ namespace KingsAndQueensHat.TeamGeneration
 						if (p == null) continue;
 						p.GamesPlayed++;
 						if (team.GameResult == GameResult.Won) p.NumberOfWins++;
+                        if (team.GameResult == GameResult.Draw) p.NumberOfDraws++;
+                        if (team.GameResult == GameResult.Lost) p.NumberOfLosses++;
 					}
 				}
 			}
@@ -95,6 +97,7 @@ namespace KingsAndQueensHat.TeamGeneration
 					: (decimal)Math.Pow((double)Math.Abs(diffToAverage), HandicapPowerNumber) * -1;
 				
 				Log(player.ToString());
+				// would be good to log everyone here? Still need to build and sort _presentPlayers though...
 			}
 		}
 

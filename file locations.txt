@@ -1,0 +1,11 @@
+we keep the hat files in dropbox so it doesn’t matter what computer we are using, we can access the leagues
+
+Dropbox > Projects\Frisbee\KingAndQueenHat\Tournaments
+C:\Users\Matt\Dropbox (Personal)\Projects\Frisbee\KingAndQueenHat\Tournaments
+
+The default location for all files made by the exe is:
+C:\Users\Matt\AppData\Roaming\KingAndQueenHat
+
+So we create a simlink there called Tournaments that links to the dropbox location
+
+mklink /D C:\Users\Matt\AppData\Roaming\KingAndQueenHat\Tournaments “C:\Users\Matt\Dropbox (Personal)\Projects\Frisbee\KingAndQueenHat\Tournaments”

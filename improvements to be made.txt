@@ -1,0 +1,31 @@
+
+- randomness seed would be better if it wasn't based on the day. Is good for dev work as can reproduce but for a one day tournament first couple of rounds are almost same teams
+- get some stats out of it:
+	- publish win percentages
+	- for prizes (figure these out, but often these might not really be applicable):
+		- "middlest" people?
+		- winning and losing streaks (only if not the K or Q)
+		- most attendance
+		- most sociable (who got put with the most other people?) (only if one or two people got the most)
+
+	- who played with who - for each person, make them clickable and see all their rounds with each person highlighted darker/greener the more times they've played on same team
+	- who DIDN'T play with who?
+	- would be good to go back in time and see results as they stood at the time
+	- go back in time and change a result, then "play forward" somehow based on (a person's results?) what might have happened. This would be good for testing
+- personal handicaps?
+	- review league 13 results
+		- it seems like Tom never got too far ahead, what about Noemie?
+		- how come Finn and Merchu didn't win more?
+		- MattK - could I have won? At what point did it become impossible <- this is a buzzkill if you know you can't win, is there something else these people can aim for?
+	- Does XP level do this? It would be better if the UI just allowed for a number beween 0-100. A good UI would be a slider with everyone on it and you just move people up and down (based on previous results too)
+	- increase exponential for handicap adjustment?
+- grading
+	- in a big league it would be good to have a couple of grading games then split people into two grades/leagues
+	- or just assign people to the grades manually, as the whole point with everything else the algo does is to give everyone a chance so top players don't always surface that quick
+	- then each round moving one male & female up and down?
+
+
+
+Observations
+- more evenly-spread (odd round) games should be better for pulling leaders back because they can be "backpacked" with worse players. Even rounds means they get put with all good players (but still should have a good chance of losing, especially if KvQ). This might make it more likely for a tie at the end though? Is nice to have "good quality" games every second game though and it does help to get everyone playing with everyone.
+- it seems like anyone is in with a chance of winning? If they can win most games anyway (do some win percentage checks on this)
